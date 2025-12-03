@@ -1,5 +1,6 @@
 const backendUrl = "https://emme-elle.onrender.com/api/preventivo";
 
+// --- STATO ---
 let righe = [];
 
 const el = (id) => document.getElementById(id);
@@ -11,33 +12,38 @@ const formatter = new Intl.NumberFormat("it-IT", {
 
 // --- INIT ---
 window.addEventListener("DOMContentLoaded", () => {
-  // Carico eventuale preventivo salvato
+  console.log("JS caricato ✅");
+
+  // Prova a caricare un preventivo salvato
   const salvato = localStorage.getItem("ciccahelper_preventivo");
   if (salvato) {
-    const data = JSON.parse salvato);
-    righe = data.righe || [];
-    el("cliente").value = data.cliente || "";
-    el("data").value = data.data || "";
-    el("note").value = data.note || "";
-    renderTable();
+    try {
+      const data = JSON.parse(salvato);
+      righe = data.righe || [];
+      el("cliente").value = data.cliente || "";
+      el("data").value = data.data || "";
+      el("note").value = data.note || "";
+      renderTable();
+    } catch (e) {
+      console.error("Errore nel parse del preventivo salvato:", e);
+    }
   }
 
-  // Eventi pulsanti base
+  // Bottoni base
   el("btn-add-row").addEventListener("click", aggiungiRigaDaForm);
   el("btn-nuovo").addEventListener("click", nuovoPreventivo);
   el("btn-pdf").addEventListener("click", esportaPDF);
 
-  // Pulsante AI
-  const bottoneAI = document.getElementById("btn-ai");
-  if (bottoneAI) {
-    bottoneAI.addEventListener("click", generaConAI);
+  // Bottone AI (se esiste)
+  const btnAI = document.getElementById("btn-ai");
+  if (btnAI) {
+    btnAI.addEventListener("click", generaConAI);
   }
 });
 
 // --------------------
 // AGGIUNGI RIGA
 // --------------------
-
 function aggiungiRigaDaForm() {
   const codice = el("codice").value.trim();
   const descrizione = el("descrizione").value.trim();
@@ -60,6 +66,7 @@ function aggiungiRigaDaForm() {
     iva,
   });
 
+  // pulisco i campi riga
   el("codice").value = "";
   el("descrizione").value = "";
   el("quantita").value = "";
@@ -74,7 +81,6 @@ function aggiungiRigaDaForm() {
 // --------------------
 // RENDER TABELLA
 // --------------------
-
 function renderTable() {
   const tbody = document.querySelector("#righe-table tbody");
   tbody.innerHTML = "";
@@ -116,7 +122,6 @@ function renderTable() {
 // --------------------
 // ELIMINA RIGA
 // --------------------
-
 function eliminaRiga(i) {
   righe.splice(i, 1);
   renderTable();
@@ -126,7 +131,6 @@ function eliminaRiga(i) {
 // --------------------
 // NUOVO PREVENTIVO
 // --------------------
-
 function nuovoPreventivo() {
   if (!confirm("Sicuro di voler svuotare tutto?")) return;
   righe = [];
@@ -140,23 +144,19 @@ function nuovoPreventivo() {
 // --------------------
 // SALVATAGGIO LOCALE
 // --------------------
-
 function salva() {
-  localStorage.setItem(
-    "ciccahelper_preventivo",
-    JSON.stringify({
-      cliente: el("cliente").value,
-      data: el("data").value,
-      note: el("note").value,
-      righe,
-    })
-  );
+  const payload = {
+    cliente: el("cliente").value,
+    data: el("data").value,
+    note: el("note").value,
+    righe,
+  };
+  localStorage.setItem("ciccahelper_preventivo", JSON.stringify(payload));
 }
 
 // --------------------
 // PDF
 // --------------------
-
 function esportaPDF() {
   if (righe.length === 0) {
     alert("Aggiungi almeno una riga.");
@@ -232,10 +232,14 @@ function esportaPDF() {
 // --------------------
 // AI: CHIAMATA BACKEND
 // --------------------
-
 async function generaConAI() {
   if (!backendUrl || backendUrl.includes("NOME.onrender.com")) {
     alert("Devi impostare il backendUrl in app.js con il tuo URL Render.");
+    return;
+  }
+
+  if (righe.length === 0) {
+    alert("Aggiungi almeno una riga al preventivo prima di usare l'AI.");
     return;
   }
 
@@ -257,6 +261,7 @@ async function generaConAI() {
 
     if (data.error) {
       alert("Errore AI: " + data.error);
+      console.error("Dettagli errore:", data);
       return;
     }
 
