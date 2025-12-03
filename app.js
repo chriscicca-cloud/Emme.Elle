@@ -233,7 +233,8 @@ function esportaPDF() {
 }
 
 // --------------------
-// AI: CHIAMATA BACKEND
+// --------------------
+// AI: CHIAMATA BACKEND + AGGIORNA RIGHE
 // --------------------
 async function generaConAI() {
   if (!backendUrl || backendUrl.includes("NOME.onrender.com")) {
@@ -268,9 +269,72 @@ async function generaConAI() {
       return;
     }
 
+    const testo = data.contenuto || "";
+
+    // Mostro comunque il testo completo dell'AI nel riquadro
     const box = document.getElementById("risultatoAI");
     box.style.display = "block";
-    box.textContent = data.contenuto;
+    box.textContent = testo;
+
+    // 👇 Provo a ricostruire righe dalla tabella Markdown dell'AI
+    const lines = testo.split("\n");
+
+    // prendo solo le righe della tabella che iniziano con | ma non sono le linee --- --- ---
+    const tableLines = lines.filter(
+      (l) => l.trim().startsWith("|") && !l.includes("---")
+    );
+
+    if (tableLines.length <= 1) {
+      console.warn("Non trovo una tabella AI da cui ricostruire i prezzi.");
+      return;
+    }
+
+    // la prima riga è l'header, le successive sono i dati
+    const dataLines = tableLines.slice(1);
+    const nuoveRighe = [];
+
+    dataLines.forEach((line) => {
+      const cols = line
+        .split("|")
+        .map((c) => c.trim())
+        .filter((c) => c !== "");
+
+      // ci aspettiamo: Codice, Descrizione, Q.tà, Prezzo netto, Sconto %, Totale riga, IVA %
+      if (cols.length < 7) return;
+
+      const codice = cols[0];
+      const descrizione = cols[1];
+      const quantita = parseNumero(cols[2]);
+      const prezzoNetto = parseNumero(cols[3]);
+      const scontoAI = parseNumero(cols[4]); // se vuoi usarlo
+      const totaleRiga = parseNumero(cols[5]);
+      const iva = parseNumero(cols[6]) || 22;
+
+      if (!descrizione || quantita <= 0 || prezzoNetto <= 0) return;
+
+      // 👉 qui uso il prezzo NETTO AI come "prezzoListino" con sconto 0
+      nuoveRighe.push({
+        codice,
+        descrizione,
+        quantita,
+        prezzoListino: prezzoNetto,
+        sconto: 0,
+        iva,
+      });
+    });
+
+    if (nuoveRighe.length === 0) {
+      console.warn("Nessuna riga valida trovata nella tabella AI.");
+      return;
+    }
+
+    // Sostituisco le righe originali con quelle calcolate dall'AI
+    righe = nuoveRighe;
+    renderTable();
+    salva();
+
+    alert("Preventivo aggiornato con i prezzi dell'AI. Ora puoi esportare il PDF.");
+
   } catch (err) {
     console.error(err);
     alert("Errore di connessione al backend.");
