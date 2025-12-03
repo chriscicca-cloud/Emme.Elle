@@ -299,3 +299,41 @@ async function generaConAI() {
     alert("Errore di connessione al backend.");
   }
 }
+// 🔗 URL backend (sostituisci con il tuo)
+const backendUrl = "https://emme-elle.onrender.com/api/preventivo";
+
+// 🔥 BOTTONE AI
+document.getElementById("btn-ai").addEventListener("click", generaConAI);
+
+async function generaConAI() {
+  const payload = {
+    cliente: document.getElementById("cliente").value,
+    data: document.getElementById("data").value,
+    note: document.getElementById("note").value,
+    righe: righe
+  };
+
+  try {
+    const res = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      alert("Errore AI: " + data.error);
+      return;
+    }
+
+    // 🟦 Mostra il risultato AI dentro la div
+    const box = document.getElementById("risultatoAI");
+    box.style.display = "block";
+    box.textContent = data.contenuto;
+
+  } catch (err) {
+    console.error(err);
+    alert("Errore di connessione al backend.");
+  }
+}
