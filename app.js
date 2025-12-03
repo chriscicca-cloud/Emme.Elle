@@ -264,3 +264,38 @@ function escapeHtml(text) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
+document.getElementById("btn-ai").addEventListener("click", generaConAI);
+
+async function generaConAI() {
+  const payload = {
+    cliente: el("cliente").value,
+    data: el("data").value,
+    note: el("note").value,
+    righe: righe
+  };
+
+  try {
+    const res = await fetch(backendUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      alert("Errore AI: " + data.error);
+      return;
+    }
+
+    // Mostra la tabella generata dall’AI
+    console.log("Risposta AI:", data.contenuto);
+
+    // Puoi scriverla in una <div> o convertirla in PDF
+    alert("Preventivo AI generato! Controlla la console per vedere il contenuto.");
+
+  } catch (e) {
+    console.error(e);
+    alert("Errore di connessione al backend.");
+  }
+}
