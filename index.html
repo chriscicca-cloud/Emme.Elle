@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>CiccaHelper – Web Preventivi</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- jsPDF per PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>CiccaHelper – Preventivi materiali edili</h1>
+
+    <section class="header-section">
+      <div class="field">
+        <label for="cliente">Cliente</label>
+        <input id="cliente" type="text" placeholder="Es. Impresa Rossi Srl" />
+      </div>
+      <div class="field">
+        <label for="data">Data</label>
+        <input id="data" type="date" />
+      </div>
+      <div class="field full">
+        <label for="note">Note preventivo</label>
+        <textarea id="note" rows="2" placeholder="Es. Consegna a piano strada inclusa..."></textarea>
+      </div>
+    </section>
+
+    <section class="table-section">
+      <h2>Righe preventivo</h2>
+
+      <div class="new-row">
+        <input id="codice" placeholder="Codice" />
+        <input id="descrizione" placeholder="Descrizione" />
+        <input id="quantita" type="number" step="0.01" placeholder="Q.tà" />
+        <input id="prezzo_listino" type="number" step="0.01" placeholder="Prezzo listino" />
+        <input id="sconto" type="number" step="0.01" placeholder="Sconto %" />
+        <input id="iva" type="number" step="0.01" placeholder="IVA %" value="22" />
+        <button id="btn-add-row">+ Aggiungi</button>
+      </div>
+
+      <table id="righe-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Codice</th>
+            <th>Descrizione</th>
+            <th>Q.tà</th>
+            <th>Listino</th>
+            <th>Sconto %</th>
+            <th>Netto</th>
+            <th>Totale riga</th>
+            <th>IVA %</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Righe generate da JS -->
+        </tbody>
+      </table>
+
+      <div class="totali">
+        <div><strong>Imponibile totale:</strong> <span id="imponibile-tot">0,00 €</span></div>
+        <div><strong>IVA totale:</strong> <span id="iva-tot">0,00 €</span></div>
+        <div><strong>Totale preventivo:</strong> <span id="totale-preventivo">0,00 €</span></div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button id="btn-nuovo">Nuovo preventivo</button>
+      <button id="btn-pdf">Esporta PDF</button>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
