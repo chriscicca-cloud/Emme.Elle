@@ -30,15 +30,18 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // Bottoni base
-  el("btn-add-row").addEventListener("click", aggiungiRigaDaForm);
-  el("btn-nuovo").addEventListener("click", nuovoPreventivo);
-  el("btn-pdf").addEventListener("click", esportaPDF);
+  const btnAdd = el("btn-add-row");
+  if (btnAdd) btnAdd.addEventListener("click", aggiungiRigaDaForm);
 
-  // Bottone AI (se esiste)
-  const btnAI = document.getElementById("btn-ai");
-  if (btnAI) {
-    btnAI.addEventListener("click", generaConAI);
-  }
+  const btnNuovo = el("btn-nuovo");
+  if (btnNuovo) btnNuovo.addEventListener("click", nuovoPreventivo);
+
+  const btnPdf = el("btn-pdf");
+  if (btnPdf) btnPdf.addEventListener("click", esportaPDF);
+
+  // Bottone AI
+  const btnAI = el("btn-ai");
+  if (btnAI) btnAI.addEventListener("click", generaConAI);
 });
 
 // --------------------
