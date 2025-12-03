@@ -69,9 +69,31 @@
     <section class="actions">
       <button id="btn-nuovo">Nuovo preventivo</button>
       <button id="btn-pdf">Esporta PDF</button>
-      <button id="btn-ai"
 
+      <!-- Bottone AI corretto -->
+      <button id="btn-ai" style="
+        background:#0077ff;
+        color:white;
+        border:none;
+        padding:8px 16px;
+        border-radius:8px;
+        cursor:pointer;
+      ">
+        Genera con AI (CiccaHelper)
+      </button>
     </section>
+
+    <!-- Area per mostrare il risultato dell'AI -->
+    <div id="risultatoAI" style="
+      white-space:pre-wrap;
+      background:#f7f7f7;
+      padding:15px;
+      border-radius:10px;
+      margin-top:20px;
+      border:1px solid #ddd;
+      display:none;
+    "></div>
+
   </div>
 
   <script src="app.js"></script>
