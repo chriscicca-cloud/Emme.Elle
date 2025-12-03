@@ -1,4 +1,5 @@
 let righe = [];
+const backendUrl = "https://emme-elle.onrender.com/api/preventivo";
 
 const el = (id) => document.getElementById(id);
 
