@@ -4,28 +4,35 @@
   <meta charset="UTF-8" />
   <title>CiccaHelper – Web Preventivi</title>
   <link rel="stylesheet" href="style.css" />
+
   <!-- jsPDF per PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
+
 <body>
   <div class="container">
     <h1>CiccaHelper – Preventivi materiali edili</h1>
 
+    <!-- HEADER -->
     <section class="header-section">
       <div class="field">
         <label for="cliente">Cliente</label>
         <input id="cliente" type="text" placeholder="Es. Impresa Rossi Srl" />
       </div>
+
       <div class="field">
         <label for="data">Data</label>
         <input id="data" type="date" />
       </div>
+
       <div class="field full">
         <label for="note">Note preventivo</label>
-        <textarea id="note" rows="2" placeholder="Es. Consegna a piano strada inclusa..."></textarea>
+        <textarea id="note" rows="2"
+          placeholder="Es. Consegna a piano strada inclusa..."></textarea>
       </div>
     </section>
 
+    <!-- TABELLA PREVENTIVO -->
     <section class="table-section">
       <h2>Righe preventivo</h2>
 
@@ -35,7 +42,7 @@
         <input id="quantita" type="number" step="0.01" placeholder="Q.tà" />
         <input id="prezzo_listino" type="number" step="0.01" placeholder="Prezzo listino" />
         <input id="sconto" type="number" step="0.01" placeholder="Sconto %" />
-        <input id="iva" type="number" step="0.01" placeholder="IVA %" value="22" />
+        <input id="iva" type="number" step="0.01" value="22" placeholder="IVA %" />
         <button id="btn-add-row">+ Aggiungi</button>
       </div>
 
@@ -54,9 +61,7 @@
             <th>Azioni</th>
           </tr>
         </thead>
-        <tbody>
-          <!-- Righe generate da JS -->
-        </tbody>
+        <tbody></tbody>
       </table>
 
       <div class="totali">
@@ -66,62 +71,45 @@
       </div>
     </section>
 
+    <!-- AZIONI -->
     <section class="actions">
       <button id="btn-nuovo">Nuovo preventivo</button>
       <button id="btn-pdf">Esporta PDF</button>
 
-      <!-- Bottone AI -->
       <button id="btn-ai" style="
         background:#0077ff;
         color:white;
         border:none;
         padding:8px 16px;
         border-radius:8px;
-        cursor:pointer;
-      ">
-        Genera con AI (CiccaHelper)
+        cursor:pointer;">
+        Genera con AI
       </button>
     </section>
 
-    <!-- Area per mostrare il risultato del preventivo AI -->
+    <!-- RISULTATO AI PREVENTIVO -->
     <div id="risultatoAI" style="
+      display:none;
       white-space:pre-wrap;
       background:#f7f7f7;
       padding:15px;
       border-radius:10px;
       margin-top:20px;
-      border:1px solid #ddd;
-      display:none;
-    "></div>
+      border:1px solid #ddd;">
+    </div>
 
-    <!-- 🧠 CHIEDI A AI -->
+    <!-- CHIEDI A AI -->
     <div id="askAIBox" style="margin-top:18px;">
-      <h2 style="margin:0 0 8px 0;">Chiedi a AI</h2>
+      <h2>Chiedi a AI</h2>
 
       <textarea id="ai-domanda" rows="3"
-        placeholder="Scrivi una domanda... (es. Trova alternative al codice X, oppure che sconto consigli?)"
-        style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd;"></textarea>
+        placeholder="Scrivi una domanda..."
+        style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd;">
+      </textarea>
 
-      <div style="display:flex; gap:10px; margin-top:10px; align-items:center;">
-        <button id="btn-ask-ai" style="
-          background:#111;
-          color:#fff;
-          border:none;
-          padding:8px 16px;
-          border-radius:8px;
-          cursor:pointer;">
-          Invia domanda
-        </button>
-
-        <button id="btn-clear-ai" style="
-          background:#9e9e9e;
-          color:#fff;
-          border:none;
-          padding:8px 16px;
-          border-radius:8px;
-          cursor:pointer;">
-          Pulisci
-        </button>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button id="btn-ask-ai">Invia domanda</button>
+        <button id="btn-clear-ai">Pulisci</button>
       </div>
 
       <div id="ai-risposta" style="
@@ -131,11 +119,44 @@
         padding:15px;
         border-radius:10px;
         margin-top:12px;
-        border:1px solid #ddd;"></div>
+        border:1px solid #ddd;">
+      </div>
     </div>
-
   </div>
 
+  <!-- 🔐 MODAL PASSWORD (NASCONDE I CARATTERI) -->
+  <div id="passwordModal" style="
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;">
+    
+    <div style="
+      background:white;
+      padding:20px;
+      border-radius:12px;
+      width:90%;
+      max-width:320px;">
+      
+      <h3>Accesso riservato</h3>
+
+      <input
+        id="passwordInput"
+        type="password"
+        placeholder="Inserisci password"
+        style="width:100%; padding:10px; font-size:16px; margin-bottom:12px;" />
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="closePasswordModal()">Annulla</button>
+        <button onclick="submitPassword()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
   <script src="app.js"></script>
 </body>
 </html>
