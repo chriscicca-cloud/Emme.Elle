@@ -12,7 +12,16 @@ const formatter = new Intl.NumberFormat("it-IT", {
   style: "currency",
   currency: "EUR",
 });
-
+// 🔐 PASSWORD BACKEND
+function getPassword() {
+  let pwd = localStorage.getItem("ciccahelper_pwd");
+  if (!pwd) {
+    pwd = prompt("EmmeElle2026!");
+    if (!pwd) return null;
+    localStorage.setItem("ciccahelper_pwd", pwd);
+  }
+  return pwd;
+}
 // --------------------
 // UTILS
 // --------------------
