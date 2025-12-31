@@ -12,7 +12,8 @@ const formatter = new Intl.NumberFormat("it-IT", {
   style: "currency",
   currency: "EUR",
 });
-// 🔐 PASSWORD BACKEND
+
+// 🔐 PASSWORD BACKEND (salvata nel browser)
 function getPassword() {
   let pwd = localStorage.getItem("ciccahelper_pwd");
   if (!pwd) {
@@ -22,6 +23,7 @@ function getPassword() {
   }
   return pwd;
 }
+
 // --------------------
 // UTILS
 // --------------------
@@ -188,6 +190,9 @@ function esportaPDF() {
 async function generaConAI() {
   if (!righe.length) return alert("Aggiungi almeno una riga.");
 
+  const pwd = getPassword();
+  if (!pwd) return;
+
   const payload = {
     cliente: el("cliente").value,
     data: el("data").value,
@@ -197,11 +202,21 @@ async function generaConAI() {
 
   const res = await fetch(backendUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-app-password": pwd
+    },
     body: JSON.stringify(payload)
   });
 
   const data = await res.json();
+
+  // Se password sbagliata o server risponde con errore
+  if (!res.ok || data.error) {
+    alert(data.error || "Errore chiamata AI");
+    return;
+  }
+
   const testo = data.contenuto || "";
 
   el("risultatoAI").style.display = "block";
@@ -238,6 +253,9 @@ async function chiediAI() {
   const domanda = el("ai-domanda").value.trim();
   if (!domanda) return alert("Scrivi una domanda.");
 
+  const pwd = getPassword();
+  if (!pwd) return;
+
   const payload = {
     domanda,
     cliente: el("cliente").value,
@@ -248,11 +266,20 @@ async function chiediAI() {
 
   const res = await fetch(askUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-app-password": pwd
+    },
     body: JSON.stringify(payload)
   });
 
   const data = await res.json();
+
+  if (!res.ok || data.error) {
+    alert(data.error || "Errore richiesta AI");
+    return;
+  }
+
   el("ai-risposta").style.display = "block";
   el("ai-risposta").textContent = data.contenuto || "(nessuna risposta)";
 }
