@@ -13,15 +13,61 @@ const formatter = new Intl.NumberFormat("it-IT", {
   currency: "EUR",
 });
 
-// 🔐 PASSWORD BACKEND (salvata nel browser)
+// --------------------
+// 🔐 PASSWORD MODAL (NON VISIBILE)
+// --------------------
+let passwordResolver = null;
+
 function getPassword() {
-  let pwd = localStorage.getItem("ciccahelper_pwd");
+  const saved = localStorage.getItem("ciccahelper_pwd");
+  if (saved) return Promise.resolve(saved);
+
+  return new Promise((resolve) => {
+    passwordResolver = resolve;
+
+    const modal = document.getElementById("passwordModal");
+    const input = document.getElementById("passwordInput");
+
+    if (!modal || !input) {
+      alert("Errore: popup password mancante in index.html");
+      resolve(null);
+      return;
+    }
+
+    input.value = "";
+    modal.style.display = "flex";
+    setTimeout(() => input.focus(), 50);
+  });
+}
+
+// queste funzioni sono chiamate dai bottoni del modal in index.html
+function submitPassword() {
+  const input = document.getElementById("passwordInput");
+  const modal = document.getElementById("passwordModal");
+  const pwd = (input?.value || "").trim();
+
   if (!pwd) {
-    pwd = prompt("EmmeElle2026!");
-    if (!pwd) return null;
-    localStorage.setItem("ciccahelper_pwd", pwd);
+    alert("Inserisci la password");
+    return;
   }
-  return pwd;
+
+  localStorage.setItem("ciccahelper_pwd", pwd);
+  if (modal) modal.style.display = "none";
+
+  if (typeof passwordResolver === "function") {
+    passwordResolver(pwd);
+    passwordResolver = null;
+  }
+}
+
+function closePasswordModal() {
+  const modal = document.getElementById("passwordModal");
+  if (modal) modal.style.display = "none";
+
+  if (typeof passwordResolver === "function") {
+    passwordResolver(null);
+    passwordResolver = null;
+  }
 }
 
 // --------------------
@@ -89,7 +135,9 @@ function aggiungiRigaDaForm() {
 
   righe.push(riga);
 
-  ["codice","descrizione","quantita","prezzo_listino","sconto"].forEach(id => el(id).value = "");
+  ["codice", "descrizione", "quantita", "prezzo_listino", "sconto"].forEach(
+    (id) => (el(id).value = "")
+  );
   el("iva").value = "22";
 
   renderTable();
@@ -153,12 +201,15 @@ function nuovoPreventivo() {
 }
 
 function salva() {
-  localStorage.setItem("ciccahelper_preventivo", JSON.stringify({
-    cliente: el("cliente").value,
-    data: el("data").value,
-    note: el("note").value,
-    righe
-  }));
+  localStorage.setItem(
+    "ciccahelper_preventivo",
+    JSON.stringify({
+      cliente: el("cliente").value,
+      data: el("data").value,
+      note: el("note").value,
+      righe,
+    })
+  );
 }
 
 // --------------------
@@ -171,13 +222,15 @@ function esportaPDF() {
   const doc = new jsPDF();
   let y = 10;
 
-  doc.text("Preventivo", 10, y); y += 8;
-  doc.text(`Cliente: ${el("cliente").value}`, 10, y); y += 6;
+  doc.text("Preventivo", 10, y);
+  y += 8;
+  doc.text(`Cliente: ${el("cliente").value}`, 10, y);
+  y += 6;
 
   righe.forEach((r, i) => {
     const netto = r.prezzoListino * (1 - r.sconto / 100);
     const tot = netto * r.quantita;
-    doc.text(`${i+1}) ${r.descrizione} - ${tot.toFixed(2)} €`, 10, y);
+    doc.text(`${i + 1}) ${r.descrizione} - ${tot.toFixed(2)} €`, 10, y);
     y += 6;
   });
 
@@ -190,29 +243,30 @@ function esportaPDF() {
 async function generaConAI() {
   if (!righe.length) return alert("Aggiungi almeno una riga.");
 
-  const pwd = getPassword();
+  const pwd = await getPassword();
   if (!pwd) return;
 
   const payload = {
     cliente: el("cliente").value,
     data: el("data").value,
     note: el("note").value,
-    righe
+    righe,
   };
 
   const res = await fetch(backendUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-app-password": pwd
+      "x-app-password": pwd,
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 
   const data = await res.json();
 
-  // Se password sbagliata o server risponde con errore
   if (!res.ok || data.error) {
+    // se password sbagliata, fai riprovare
+    if (res.status === 401) localStorage.removeItem("ciccahelper_pwd");
     alert(data.error || "Errore chiamata AI");
     return;
   }
@@ -222,12 +276,14 @@ async function generaConAI() {
   el("risultatoAI").style.display = "block";
   el("risultatoAI").textContent = testo;
 
-  // aggiorna righe dai prezzi AI (markdown)
-  const rows = testo.split("\n").filter(l => l.startsWith("|") && !l.includes("---")).slice(1);
+  const rows = testo
+    .split("\n")
+    .filter((l) => l.startsWith("|") && !l.includes("---"))
+    .slice(1);
 
   const nuove = [];
-  rows.forEach(l => {
-    const c = l.split("|").map(x => x.trim()).filter(Boolean);
+  rows.forEach((l) => {
+    const c = l.split("|").map((x) => x.trim()).filter(Boolean);
     if (c.length < 7) return;
     nuove.push({
       codice: c[0],
@@ -235,7 +291,7 @@ async function generaConAI() {
       quantita: parseNumero(c[2]),
       prezzoListino: parseNumero(c[3]),
       sconto: 0,
-      iva: parseNumero(c[6]) || 22
+      iva: parseNumero(c[6]) || 22,
     });
   });
 
@@ -253,7 +309,7 @@ async function chiediAI() {
   const domanda = el("ai-domanda").value.trim();
   if (!domanda) return alert("Scrivi una domanda.");
 
-  const pwd = getPassword();
+  const pwd = await getPassword();
   if (!pwd) return;
 
   const payload = {
@@ -261,21 +317,22 @@ async function chiediAI() {
     cliente: el("cliente").value,
     data: el("data").value,
     note: el("note").value,
-    righe
+    righe,
   };
 
   const res = await fetch(askUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-app-password": pwd
+      "x-app-password": pwd,
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 
   const data = await res.json();
 
   if (!res.ok || data.error) {
+    if (res.status === 401) localStorage.removeItem("ciccahelper_pwd");
     alert(data.error || "Errore richiesta AI");
     return;
   }
