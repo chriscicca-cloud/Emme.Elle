@@ -83,7 +83,6 @@ function parseNumero(val) {
 }
 
 function getUnitaDefault() {
-  // se in index.html hai <select id="unita">...</select>
   const u = el("unita");
   return u?.value || "pz";
 }
@@ -100,7 +99,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const data = JSON.parse(salvato);
       righe = (data.righe || []).map((r) => ({
         ...r,
-        unita: r.unita || "pz", // retro-compatibilità
+        unita: r.unita || "pz",
       }));
       el("cliente").value = data.cliente || "";
       el("data").value = data.data || "";
@@ -114,7 +113,6 @@ window.addEventListener("DOMContentLoaded", () => {
   el("btn-pdf")?.addEventListener("click", esportaPDF);
   el("btn-ai")?.addEventListener("click", generaConAI);
 
-  // Chiedi a AI
   el("btn-ask-ai")?.addEventListener("click", chiediAI);
   el("btn-clear-ai")?.addEventListener("click", () => {
     el("ai-domanda").value = "";
@@ -131,7 +129,7 @@ function aggiungiRigaDaForm() {
     codice: el("codice").value.trim(),
     descrizione: el("descrizione").value.trim(),
     quantita: parseFloat(el("quantita").value) || 0,
-    unita: getUnitaDefault(), // ✅ nuova
+    unita: getUnitaDefault(),
     prezzoListino: parseFloat(el("prezzo_listino").value) || 0,
     sconto: parseFloat(el("sconto").value) || 0,
     iva: parseFloat(el("iva").value) || 22,
@@ -172,9 +170,6 @@ function renderTable() {
     ivaTot += ivaRiga;
 
     const tr = document.createElement("tr");
-
-    // ✅ Se hai aggiunto la colonna "U.M." in index.html, questa riga è perfetta.
-    // Se NON l'hai aggiunta, la tabella si disallinea: aggiungila (ti dico sotto come).
     tr.innerHTML = `
       <td>${i + 1}</td>
       <td>${r.codice}</td>
@@ -226,44 +221,166 @@ function salva() {
 }
 
 // --------------------
-// PDF
+// PDF (PROFESSIONALE)
 // --------------------
 function esportaPDF() {
   if (!righe.length) return alert("Nessuna riga.");
 
-  // ✅ più compatibile su mobile
-  const doc = new window.jspdf.jsPDF();
-  let y = 10;
+  const doc = new window.jspdf.jsPDF("p", "mm", "a4");
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const left = 10;
+  const right = 10;
+  const maxX = pageWidth - right;
 
+  const euro = (n) => `${(Number(n) || 0).toFixed(2)} €`;
+
+  // colonne (mm)
+  const cols = {
+    codice: left,
+    descr: left + 18,
+    qta: left + 100,
+    um: left + 112,
+    list: left + 126,
+    sconto: left + 144,
+    netto: left + 162,
+    totale: left + 188,
+  };
+
+  let y = 12;
+
+  // Intestazione azienda
   doc.setFontSize(16);
-  doc.text("Preventivo", 10, y);
-  y += 10;
+  doc.setFont(undefined, "bold");
+  doc.text("Emme Elle Edilizia Green 5.0 srls", left, y);
+  doc.setFont(undefined, "normal");
+  y += 7;
 
+  doc.setFontSize(11);
+  doc.text("PREVENTIVO", left, y);
+  y += 7;
+
+  // Dati cliente/data/note
   doc.setFontSize(10);
-  doc.text(`Cliente: ${el("cliente").value}`, 10, y);
+  doc.text(`Cliente: ${(el("cliente").value || "-").trim()}`, left, y);
+  doc.text(`Data: ${(el("data").value || "-").trim()}`, maxX, y, { align: "right" });
   y += 6;
-  doc.text(`Data: ${el("data").value}`, 10, y);
-  y += 8;
 
-  righe.forEach((r, i) => {
-    if (y > 280) {
+  const note = (el("note").value || "").trim();
+  if (note) {
+    doc.setFontSize(9);
+    const noteLines = doc.splitTextToSize(`Note: ${note}`, pageWidth - left - right);
+    doc.text(noteLines, left, y);
+    y += noteLines.length * 4 + 2;
+  }
+
+  // helpers per pagina/tabella
+  const headerRow = () => {
+    doc.setDrawColor(80);
+    doc.setLineWidth(0.3);
+    doc.line(left, y, maxX, y);
+    y += 5;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, "bold");
+    doc.text("Cod.", cols.codice, y);
+    doc.text("Descrizione", cols.descr, y);
+    doc.text("Q.tà", cols.qta, y, { align: "right" });
+    doc.text("U.M.", cols.um, y, { align: "right" });
+    doc.text("Listino", cols.list, y, { align: "right" });
+    doc.text("S%", cols.sconto, y, { align: "right" });
+    doc.text("Netto", cols.netto, y, { align: "right" });
+    doc.text("Tot.", cols.totale, y, { align: "right" });
+    doc.setFont(undefined, "normal");
+
+    y += 2;
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.2);
+    doc.line(left, y, maxX, y);
+    y += 5;
+  };
+
+  const newPageIfNeeded = (needed = 12) => {
+    if (y + needed > 287) {
       doc.addPage();
-      y = 10;
+      y = 15;
+      headerRow();
     }
-    const netto = r.prezzoListino * (1 - r.sconto / 100);
-    const tot = netto * r.quantita;
+  };
 
-    doc.text(
-      `${i + 1}) ${r.descrizione} - ${r.quantita.toFixed(2)} ${r.unita || "pz"} x ${netto.toFixed(
-        2
-      )} € = ${tot.toFixed(2)} €`,
-      10,
-      y
+  // Tabella
+  headerRow();
+
+  let imponibile = 0;
+  let ivaTot = 0;
+
+  righe.forEach((r) => {
+    newPageIfNeeded(14);
+
+    const qta = Number(r.quantita || 0);
+    const um = (r.unita || "pz").toString();
+    const listino = Number(r.prezzoListino || 0);
+    const sconto = Number(r.sconto || 0);
+    const iva = Number(r.iva || 22);
+
+    const netto = listino * (1 - sconto / 100);
+    const totRiga = netto * qta;
+    const ivaRiga = totRiga * (iva / 100);
+
+    imponibile += totRiga;
+    ivaTot += ivaRiga;
+
+    // Descrizione multi-linea
+    doc.setFontSize(9);
+    const descrLines = doc.splitTextToSize(
+      (r.descrizione || "").toString(),
+      cols.qta - cols.descr - 2
     );
-    y += 6;
+
+    doc.text((r.codice || "").toString().slice(0, 10), cols.codice, y);
+    doc.text(descrLines, cols.descr, y);
+
+    doc.text(qta.toFixed(2), cols.qta, y, { align: "right" });
+    doc.text(um, cols.um, y, { align: "right" });
+    doc.text(euro(listino), cols.list, y, { align: "right" });
+    doc.text(sconto.toFixed(2), cols.sconto, y, { align: "right" });
+    doc.text(euro(netto), cols.netto, y, { align: "right" });
+    doc.text(euro(totRiga), cols.totale, y, { align: "right" });
+
+    const rowH = Math.max(6, descrLines.length * 4);
+    y += rowH;
+
+    doc.setDrawColor(230);
+    doc.line(left, y - 2, maxX, y - 2);
+    doc.setDrawColor(80);
   });
 
-  doc.save("preventivo.pdf");
+  // Totali
+  newPageIfNeeded(30);
+  y += 4;
+
+  doc.setDrawColor(80);
+  doc.setLineWidth(0.3);
+  doc.line(left, y, maxX, y);
+  y += 8;
+
+  const totale = imponibile + ivaTot;
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, "bold");
+  doc.text(`Imponibile: ${euro(imponibile)}`, maxX, y, { align: "right" });
+  y += 6;
+  doc.text(`IVA: ${euro(ivaTot)}`, maxX, y, { align: "right" });
+  y += 8;
+  doc.text(`Totale preventivo: ${euro(totale)}`, maxX, y, { align: "right" });
+  doc.setFont(undefined, "normal");
+
+  // Footer
+  doc.setFontSize(8);
+  doc.setTextColor(120);
+  doc.text("Documento generato con CiccaHelper", left, 292);
+  doc.setTextColor(0);
+
+  doc.save("preventivo_emme-elle.pdf");
 }
 
 // --------------------
@@ -279,7 +396,7 @@ async function generaConAI() {
     cliente: el("cliente").value,
     data: el("data").value,
     note: el("note").value,
-    righe, // ✅ include unita
+    righe,
   };
 
   const res = await fetch(backendUrl, {
@@ -304,7 +421,6 @@ async function generaConAI() {
   el("risultatoAI").style.display = "block";
   el("risultatoAI").textContent = testo;
 
-  // ✅ leggo tabella AI: provo anche a prendere U.M. se presente
   const rows = testo
     .split("\n")
     .filter((l) => l.startsWith("|") && !l.includes("---"))
@@ -314,16 +430,13 @@ async function generaConAI() {
   rows.forEach((l) => {
     const c = l.split("|").map((x) => x.trim()).filter(Boolean);
 
-    // Possibili formati:
-    // A) Codice, Descrizione, Q.tà, U.M., Prezzo netto, Sconto %, Totale riga, IVA %
-    // B) Codice, Descrizione, Q.tà, Prezzo netto, Sconto %, Totale riga, IVA %
     if (c.length >= 8) {
       nuove.push({
         codice: c[0],
         descrizione: c[1],
         quantita: parseNumero(c[2]),
         unita: c[3] || "pz",
-        prezzoListino: parseNumero(c[4]), // prezzo netto/di riga
+        prezzoListino: parseNumero(c[4]),
         sconto: 0,
         iva: parseNumero(c[7]) || 22,
       });
@@ -362,7 +475,7 @@ async function chiediAI() {
     cliente: el("cliente").value,
     data: el("data").value,
     note: el("note").value,
-    righe, // ✅ include unita
+    righe,
   };
 
   const res = await fetch(askUrl, {
