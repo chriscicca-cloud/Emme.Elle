@@ -27,8 +27,7 @@
 
       <div class="field full">
         <label for="note">Note preventivo</label>
-        <textarea id="note" rows="2"
-          placeholder="Es. Consegna a piano strada inclusa..."></textarea>
+        <textarea id="note" rows="2" placeholder="Es. Consegna a piano strada inclusa..."></textarea>
       </div>
     </section>
 
@@ -39,14 +38,16 @@
       <div class="new-row">
         <input id="codice" placeholder="Codice" />
         <input id="descrizione" placeholder="Descrizione" />
-<input id="quantita" type="number" step="0.01" placeholder="Q.tà" style="width:60%;" />
 
-<select id="unita" style="width:38%;">
-  <option value="mq">mq</option>
-  <option value="mc">mc</option>
-  <option value="ml">ml</option>
-  <option value="pz">pz</option>
-</select>
+        <!-- ✅ Quantità + Unità di misura -->
+        <input id="quantita" type="number" step="0.01" placeholder="Q.tà" style="width:60%;" />
+        <select id="unita" style="width:38%;">
+          <option value="mq">mq</option>
+          <option value="mc">mc</option>
+          <option value="ml">ml</option>
+          <option value="pz" selected>pz</option>
+        </select>
+
         <input id="prezzo_listino" type="number" step="0.01" placeholder="Prezzo listino" />
         <input id="sconto" type="number" step="0.01" placeholder="Sconto %" />
         <input id="iva" type="number" step="0.01" value="22" placeholder="IVA %" />
@@ -60,6 +61,7 @@
             <th>Codice</th>
             <th>Descrizione</th>
             <th>Q.tà</th>
+            <th>U.M.</th> <!-- ✅ NUOVA COLONNA -->
             <th>Listino</th>
             <th>Sconto %</th>
             <th>Netto</th>
@@ -111,8 +113,7 @@
 
       <textarea id="ai-domanda" rows="3"
         placeholder="Scrivi una domanda..."
-        style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd;">
-      </textarea>
+        style="width:100%; padding:10px; border-radius:10px; border:1px solid #ddd;"></textarea>
 
       <div style="display:flex; gap:10px; margin-top:10px;">
         <button id="btn-ask-ai">Invia domanda</button>
@@ -126,8 +127,7 @@
         padding:15px;
         border-radius:10px;
         margin-top:12px;
-        border:1px solid #ddd;">
-      </div>
+        border:1px solid #ddd;"></div>
     </div>
   </div>
 
@@ -140,14 +140,14 @@
     align-items:center;
     justify-content:center;
     z-index:9999;">
-    
+
     <div style="
       background:white;
       padding:20px;
       border-radius:12px;
       width:90%;
       max-width:320px;">
-      
+
       <h3>Accesso riservato</h3>
 
       <input
