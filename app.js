@@ -40,7 +40,6 @@ function getPassword() {
   });
 }
 
-// queste funzioni sono chiamate dai bottoni del modal in index.html
 function submitPassword() {
   const input = document.getElementById("passwordInput");
   const modal = document.getElementById("passwordModal");
@@ -83,6 +82,12 @@ function parseNumero(val) {
   return isNaN(num) ? 0 : num;
 }
 
+function getUnitaDefault() {
+  // se in index.html hai <select id="unita">...</select>
+  const u = el("unita");
+  return u?.value || "pz";
+}
+
 // --------------------
 // INIT
 // --------------------
@@ -93,7 +98,10 @@ window.addEventListener("DOMContentLoaded", () => {
   if (salvato) {
     try {
       const data = JSON.parse(salvato);
-      righe = data.righe || [];
+      righe = (data.righe || []).map((r) => ({
+        ...r,
+        unita: r.unita || "pz", // retro-compatibilità
+      }));
       el("cliente").value = data.cliente || "";
       el("data").value = data.data || "";
       el("note").value = data.note || "";
@@ -123,6 +131,7 @@ function aggiungiRigaDaForm() {
     codice: el("codice").value.trim(),
     descrizione: el("descrizione").value.trim(),
     quantita: parseFloat(el("quantita").value) || 0,
+    unita: getUnitaDefault(), // ✅ nuova
     prezzoListino: parseFloat(el("prezzo_listino").value) || 0,
     sconto: parseFloat(el("sconto").value) || 0,
     iva: parseFloat(el("iva").value) || 22,
@@ -163,11 +172,15 @@ function renderTable() {
     ivaTot += ivaRiga;
 
     const tr = document.createElement("tr");
+
+    // ✅ Se hai aggiunto la colonna "U.M." in index.html, questa riga è perfetta.
+    // Se NON l'hai aggiunta, la tabella si disallinea: aggiungila (ti dico sotto come).
     tr.innerHTML = `
       <td>${i + 1}</td>
       <td>${r.codice}</td>
       <td>${r.descrizione}</td>
       <td>${r.quantita.toFixed(2)}</td>
+      <td>${r.unita || "pz"}</td>
       <td>${r.prezzoListino.toFixed(2)}</td>
       <td>${r.sconto.toFixed(2)}</td>
       <td>${netto.toFixed(2)}</td>
@@ -218,19 +231,35 @@ function salva() {
 function esportaPDF() {
   if (!righe.length) return alert("Nessuna riga.");
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+  // ✅ più compatibile su mobile
+  const doc = new window.jspdf.jsPDF();
   let y = 10;
 
+  doc.setFontSize(16);
   doc.text("Preventivo", 10, y);
-  y += 8;
+  y += 10;
+
+  doc.setFontSize(10);
   doc.text(`Cliente: ${el("cliente").value}`, 10, y);
   y += 6;
+  doc.text(`Data: ${el("data").value}`, 10, y);
+  y += 8;
 
   righe.forEach((r, i) => {
+    if (y > 280) {
+      doc.addPage();
+      y = 10;
+    }
     const netto = r.prezzoListino * (1 - r.sconto / 100);
     const tot = netto * r.quantita;
-    doc.text(`${i + 1}) ${r.descrizione} - ${tot.toFixed(2)} €`, 10, y);
+
+    doc.text(
+      `${i + 1}) ${r.descrizione} - ${r.quantita.toFixed(2)} ${r.unita || "pz"} x ${netto.toFixed(
+        2
+      )} € = ${tot.toFixed(2)} €`,
+      10,
+      y
+    );
     y += 6;
   });
 
@@ -250,7 +279,7 @@ async function generaConAI() {
     cliente: el("cliente").value,
     data: el("data").value,
     note: el("note").value,
-    righe,
+    righe, // ✅ include unita
   };
 
   const res = await fetch(backendUrl, {
@@ -265,7 +294,6 @@ async function generaConAI() {
   const data = await res.json();
 
   if (!res.ok || data.error) {
-    // se password sbagliata, fai riprovare
     if (res.status === 401) localStorage.removeItem("ciccahelper_pwd");
     alert(data.error || "Errore chiamata AI");
     return;
@@ -276,6 +304,7 @@ async function generaConAI() {
   el("risultatoAI").style.display = "block";
   el("risultatoAI").textContent = testo;
 
+  // ✅ leggo tabella AI: provo anche a prendere U.M. se presente
   const rows = testo
     .split("\n")
     .filter((l) => l.startsWith("|") && !l.includes("---"))
@@ -284,15 +313,31 @@ async function generaConAI() {
   const nuove = [];
   rows.forEach((l) => {
     const c = l.split("|").map((x) => x.trim()).filter(Boolean);
-    if (c.length < 7) return;
-    nuove.push({
-      codice: c[0],
-      descrizione: c[1],
-      quantita: parseNumero(c[2]),
-      prezzoListino: parseNumero(c[3]),
-      sconto: 0,
-      iva: parseNumero(c[6]) || 22,
-    });
+
+    // Possibili formati:
+    // A) Codice, Descrizione, Q.tà, U.M., Prezzo netto, Sconto %, Totale riga, IVA %
+    // B) Codice, Descrizione, Q.tà, Prezzo netto, Sconto %, Totale riga, IVA %
+    if (c.length >= 8) {
+      nuove.push({
+        codice: c[0],
+        descrizione: c[1],
+        quantita: parseNumero(c[2]),
+        unita: c[3] || "pz",
+        prezzoListino: parseNumero(c[4]), // prezzo netto/di riga
+        sconto: 0,
+        iva: parseNumero(c[7]) || 22,
+      });
+    } else if (c.length >= 7) {
+      nuove.push({
+        codice: c[0],
+        descrizione: c[1],
+        quantita: parseNumero(c[2]),
+        unita: "pz",
+        prezzoListino: parseNumero(c[3]),
+        sconto: 0,
+        iva: parseNumero(c[6]) || 22,
+      });
+    }
   });
 
   if (nuove.length) {
@@ -317,7 +362,7 @@ async function chiediAI() {
     cliente: el("cliente").value,
     data: el("data").value,
     note: el("note").value,
-    righe,
+    righe, // ✅ include unita
   };
 
   const res = await fetch(askUrl, {
